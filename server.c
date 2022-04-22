@@ -67,7 +67,7 @@ void sendResponse(char *filename, struct stat stats, int new_fd) {
     
     if (extension != NULL) printf("%s\n", extension);
     else printf("No extension\n");
-
+    
     // SEND content-type based on extension
     if (extension != NULL && strcasecmp(extension, "html") == 0) 
         send(new_fd, "Content-Type: text/html\r\n\r\n", 27, 0);
