@@ -9,13 +9,42 @@
 
 #define PORT 15635 // the port users will connect to
 
+/* Parses a request message for the filename */
+char* parseForFileName (char* request) {
+    int starti, endi;
+    int i = 0;
+    // skip request type word 
+    while (request[i] != ' ') i++;
+    i++; 
+    // skip initial / of pathname
+    // set start i to start of pathname
+    if (request[i] == '/') i++;
+    starti = i;
+
+    // pathname after request type (seperated by a space)
+    // set end i to end of pathname
+    while (request[i] != ' ') i++;
+    endi = i;
+
+    // allocate mem for size of path name
+    // +1 for zero bit
+    int filename_size = endi - starti;
+    char* filename_rough = malloc(filename_size + 1);
+
+    // set pathname var to appropriate path name
+    strncpy(filename_rough, request+starti, filename_size);
+    filename_rough[filename_size] = '\0';
+
+    // replace all "%20" substr with " "
+    // TODO
+    return filename_rough;
+}
+
 int main(int argc, char const *argv[]) {
-    int sock_fd, new_fd, valread; // listen on sock_fd, new coonection on new_fd
+    int sock_fd, new_fd; // listen on sock_fd, new coonection on new_fd
     struct sockaddr_in server_addr, client_addr;
-    int opt = 1;
     int addrlen = sizeof(server_addr);
-    char buffer[1024] = {0};
-    char *hello = "Hello from server";
+    int opt = 1;
 
     // Creating socket file descriptor
     // socket() - https://man7.org/linux/man-pages/man2/socket.2.html#RETURN_VALUE
@@ -26,7 +55,7 @@ int main(int argc, char const *argv[]) {
 
     // Setting socket options
     // Note: https://stackoverflow.com/questions/58599070/socket-programming-setsockopt-protocol-not-available
-    // setsockopt() - https://pubs.opengroup.org/onlinepubs/000095399/functions/setsockopt.html
+    // setsockopt() - https://man7.org/linux/man-pages/man3/setsockopt.3p.html
     if (setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
         perror("setsockopt failed");
         exit(EXIT_FAILURE);
@@ -54,12 +83,35 @@ int main(int argc, char const *argv[]) {
     // Accept connections until session terminated
     // accept() - https://man7.org/linux/man-pages/man2/accept.2.html
     // TODO
+    int valread; // store bytes read from client
+    char buffer[1024] = {0};
+    char *hello = "Hello from server";
+
     while ((new_fd = accept(sock_fd, (struct sockaddr *) &client_addr, (socklen_t * ) & addrlen)) != -1) {
-        //read message from client
+        // read request message from client
+        // read() - https://man7.org/linux/man-pages/man2/read.2.html
         valread = read(new_fd, buffer, 1024);
-        printf("%s\n", buffer);
-        send(new_fd, hello, strlen(hello), 0);
-        printf("Hello message sent\n");
+        if (valread == -1) { // error handling for read
+            close(sock_fd);
+            close(new_fd);
+            perror("read failed");
+            exit(EXIT_FAILURE);
+        }
+        else if (valread > 0) {// bytes were read
+            // print request message from client
+            printf("%s\n", buffer);
+
+            // parse request message for pathname
+            // for this project, it would be a single name
+            char* filename = parseForFileName(buffer);
+            printf("%s\n", filename);
+
+            // get file type from filename
+            // TODO
+
+            //send(new_fd, hello, strlen(hello), 0);
+            //printf("Hello message sent\n");
+        }
     }
     close(sock_fd);
     close(new_fd);
