@@ -11,6 +11,15 @@
 
 #define PORT 15635 // the port users will connect to
 
+int getDigitsCount (int number) {
+    int digits = 0;
+    while (number > 0) {
+        digits++;
+        number /= 10;
+    }
+    return digits;
+}
+
 char* getFileExtension (char* filename) {
     char* extension = NULL;
     int len = strlen(filename);
@@ -41,16 +50,17 @@ void sendResponse(char *filename, struct stat stats, int new_fd) {
         return;
     }
 
+    // send http version and status code
+    write(new_fd, "HTTP/1.1 200 OK\n", 16); 
+
+    // acquire content-length
     stat(filename, &stats); //for timer
-    // allocate content-length: header line with num bytes in object being sent
     int size = stats.st_size;
-    int len = log10(size) + 1 + 21; //size of message = size bytes + 21 for characters
+    int len = getDigitsCount(size) + 21; //size of message = size bytes + 21 for characters
     char* content_length = malloc(len);
     sprintf(content_length, "Content-Length: %d\n", size);
 
-    printf("HTTP/1.1 200 OK\n");
-    write(new_fd, "HTTP/1.1 200 OK\n", 16); //HTTP response
-    printf("%s", content_length);
+    // send content-length
     write(new_fd, content_length, size);
 
     // get file extension from filename
@@ -58,29 +68,17 @@ void sendResponse(char *filename, struct stat stats, int new_fd) {
     printf("%s\n", extension);
 
     // send content-type based on extension
-    if (extension != NULL && strcasecmp(extension, "html") == 0) {
-        printf("Content-Type: text/html\n\n");
+    if (extension != NULL && strcasecmp(extension, "html") == 0) 
         send(new_fd, "Content-Type: text/html\n\n", 25, 0);
-    }
-    else if (extension != NULL && strcasecmp(extension, "txt") == 0) {
-        printf("Content-Type: text/plain\n\n");
+    else if (extension != NULL && strcasecmp(extension, "txt") == 0) 
         send(new_fd, "Content-Type: text/plain\n\n", 26, 0);
-    }
-    else if (extension != NULL && strcasecmp(extension, "jpg") == 0) {
-        printf("Content-Type: image/jpeg\n\n");
+    else if (extension != NULL && (strcasecmp(extension, "jpg") || strcasecmp(extension, "jpeg")) == 0) 
         send(new_fd, "Content-Type: image/jpeg\n\n", 26, 0);
-    }
-    else if (extension != NULL && strcasecmp(extension, "png") == 0) {
-        printf("Content-Type: image/png\n\n");
+    else if (extension != NULL && strcasecmp(extension, "png") == 0) 
         send(new_fd, "Content-Type: image/png\n\n", 25, 0);
-    }
-    else if (extension != NULL && strcasecmp(extension, "gif") == 0) {
-        printf("Content-Type: image/gif\n\n");
+    else if (extension != NULL && strcasecmp(extension, "gif") == 0) 
         send(new_fd, "Content-Type: image/gif\n\n", 25, 0);
-    }
     else {
-        printf("Content-Type: application/octet-stream\n\n");
-        printf("Content-Disposition: attachment\n\n");
         send(new_fd, "Content-Type: application/octet-stream\n\n", 40, 0);
         send(new_fd, "Content-Disposition: attachment\n\n", 33, 0);
     }
@@ -133,13 +131,16 @@ char* parseForFileName (char* request) {
     int p20occurences = 0;
     char* filename = malloc(filename_size);
 
-    for (int j = 0, k = 0; filename_rough[j] != '\0'; j++, k++){
+    int j = 0, k = 0;
+    while (filename_rough[j] != '\0') {
         if (filename_rough[j] == '%' && j <= filename_size - 3){ //char is '%' and enough room to replace "%20" with ' '
             filename[k] = ' ';
             j += 2; //iterate past "%2"
         } else {
             filename[k] = filename_rough[j];
         }
+        j++;
+        k++;
     }
     return filename;
 }
@@ -202,7 +203,7 @@ int main(int argc, char const *argv[]) {
             exit(EXIT_FAILURE);
         }
         else if (valread > 0) { // bytes were read
-            // print request message from client
+            // print request from client
             printf("%s\n", buffer);
 
             // parse request message for pathname
@@ -213,8 +214,9 @@ int main(int argc, char const *argv[]) {
             // send response to client
             sendResponse(filename, stats, new_fd);
 
-            //send(new_fd, hello, strlen(hello), 0);
-            //printf("Hello message sent\n");
+            // close client socket
+            // close () - https://man7.org/linux/man-pages/man2/close.2.html
+            close(new_fd);
         }
     }
     close(sock_fd);
