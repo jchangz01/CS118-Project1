@@ -87,8 +87,6 @@ void sendResponse(char *filename, struct stat stats, int new_fd) {
     char file_buffer[8192] = {0};
     int fd = fileno(fp);
 
-    printf("test\n");
-
     while ((bytesread = read(fd, file_buffer, 8192)) != 0) {
         if (bytesread > 0) {
             if (send(new_fd, file_buffer, bytesread, 0) == -1) {
@@ -132,12 +130,16 @@ char* parseForFileName (char* request) {
     // replace all "%25" substr with "%"
     int p20occurences = 0;
     char* filename = malloc(filename_size);
+    memset(filename, 0, filename_size);
 
     int j = 0, k = 0;
     while (filename_rough[j] != '\0') {
-        if (filename_rough[j] == '%' && j <= filename_size - 3){ //char is '%' and enough room to replace "%20" with ' '
+        if (j <= filename_size - 3 && filename_rough[j] == '%' && filename_rough[j+1] == '2' && filename_rough[j+2] == '0'){ //char is '%20' and enough room to replace "%20" with ' '
             filename[k] = ' ';
             j += 2; //iterate past "%2"
+        } else if (j <= filename_size - 3 && filename_rough[j] == '%' && filename_rough[j+1] == '2' && filename_rough[j+2] == '5'){
+            filename[k] = '%';
+            j += 2;
         } else {
             filename[k] = filename_rough[j];
         }
