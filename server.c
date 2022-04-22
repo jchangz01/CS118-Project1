@@ -183,7 +183,7 @@ int main(int argc, char const *argv[]) {
 
     // Listen for connections 
     // listen() - https://man7.org/linux/man-pages/man2/listen.2.html
-    if (listen(sock_fd, 3) == -1) {
+    if (listen(sock_fd, 5) == -1) {
         perror("listen failed");
         exit(EXIT_FAILURE);
     }
