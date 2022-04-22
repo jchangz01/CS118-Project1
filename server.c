@@ -3,8 +3,10 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <stdlib.h>
 #include <netinet/in.h>
+#include <math.h>
 #include <string.h>
 
 #define PORT 15635 // the port users will connect to
@@ -27,7 +29,7 @@ char* getFileExtension (char* filename) {
     return extension;
 }
 
-void sendResponse(char *filename, int new_fd) {
+void sendResponse(char *filename, struct stat stats, int new_fd) {
     // open file to check if it exists
     FILE* fp = fopen(filename, "r");
     if (fp == NULL) { // file does not exist
@@ -38,6 +40,16 @@ void sendResponse(char *filename, int new_fd) {
         close(new_fd);
         return;
     }
+
+    stat(filename, &stats); //for timer
+    // allocate content-length: header line with num bytes in object being sent
+    int size = stats.st_size;
+    int len = log10(size) + 1 + 21; //size of message = size bytes + 21 for characters
+    char* content_length = malloc(len);
+    sprintf(content_length, "Content-Length: %d\n", size);
+
+    write(new_fd, "HTTP/1.1 200 OK\n", 16); //HTTP response
+    write(new_fd, content_length, size);
 
     // get file extension from filename
     char* extension = getFileExtension(filename);
@@ -61,6 +73,24 @@ void sendResponse(char *filename, int new_fd) {
     else if (strcasecmp(extension, "gif") == 0) {
         printf("Content-Type: image/gif\n\n");
         send(new_fd, "Content-Type: image/gif\n\n", 25, 0);
+    }
+
+    // send the requested file 
+    int bytesread;
+    char file_buffer[4096] = {0};
+    int fd = fileno(fp);
+
+    while ((bytesread = read(fd, file_buffer, 4096)) != 0) {
+        if (bytesread > 0) {
+            if (send(new_fd, file_buffer, bytesread, 0) == -1) {
+                perror("write error");
+                exit(EXIT_FAILURE);
+            }
+        }	
+        else {
+            perror("read error");   
+            exit(EXIT_FAILURE);
+        }
     }
 }
 
@@ -146,10 +176,10 @@ int main(int argc, char const *argv[]) {
 
     // Accept connections until session terminated
     // accept() - https://man7.org/linux/man-pages/man2/accept.2.html
-    // TODO
     int valread; // store bytes read from client
     char buffer[4096] = {0};
     char *hello = "Hello from server";
+    struct stat stats;
 
     while ((new_fd = accept(sock_fd, (struct sockaddr *) &client_addr, (socklen_t * ) & addrlen)) != -1) {
         // read request message from client
@@ -171,7 +201,7 @@ int main(int argc, char const *argv[]) {
             printf("%s\n", filename);
 
             // send response to client
-            sendResponse(filename, new_fd);
+            sendResponse(filename, stats, new_fd);
 
             //send(new_fd, hello, strlen(hello), 0);
             //printf("Hello message sent\n");
