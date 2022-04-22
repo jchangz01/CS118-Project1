@@ -6,7 +6,6 @@
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <netinet/in.h>
-#include <math.h>
 #include <string.h>
 
 #define PORT 15635 // the port users will connect to
@@ -50,45 +49,47 @@ void sendResponse(char *filename, struct stat stats, int new_fd) {
         return;
     }
 
-    // send http version and status code
+    // SEND http version and status code
     write(new_fd, "HTTP/1.1 200 OK\n", 16); 
 
     // acquire content-length
     stat(filename, &stats); //for timer
     int size = stats.st_size;
-    int len = getDigitsCount(size) + 21; //size of message = size bytes + 21 for characters
+    int len = getDigitsCount(size) + 17; //size of message = size bytes + 17 for characters
     char* content_length = malloc(len);
     sprintf(content_length, "Content-Length: %d\n", size);
 
-    // send content-length
+    // SEND content-length
     write(new_fd, content_length, size);
 
     // get file extension from filename
     char* extension = getFileExtension(filename);
-    printf("%s\n", extension);
+    
+    if (extension != NULL) printf("%s\n", extension);
+    else printf("No extension\n");
 
-    // send content-type based on extension
+    // SEND content-type based on extension
     if (extension != NULL && strcasecmp(extension, "html") == 0) 
-        send(new_fd, "Content-Type: text/html\n\n", 25, 0);
+        send(new_fd, "Content-Type: text/html\r\n\r\n", 27, 0);
     else if (extension != NULL && strcasecmp(extension, "txt") == 0) 
-        send(new_fd, "Content-Type: text/plain\n\n", 26, 0);
-    else if (extension != NULL && (strcasecmp(extension, "jpg") || strcasecmp(extension, "jpeg")) == 0) 
-        send(new_fd, "Content-Type: image/jpeg\n\n", 26, 0);
+        send(new_fd, "Content-Type: text/plain\r\n\r\n", 28, 0);
+    else if (extension != NULL && strcasecmp(extension, "jpg") == 0) 
+        send(new_fd, "Content-Type: image/jpeg\r\n\r\n", 28, 0);
     else if (extension != NULL && strcasecmp(extension, "png") == 0) 
-        send(new_fd, "Content-Type: image/png\n\n", 25, 0);
+        send(new_fd, "Content-Type: image/png\r\n\r\n", 27, 0);
     else if (extension != NULL && strcasecmp(extension, "gif") == 0) 
-        send(new_fd, "Content-Type: image/gif\n\n", 25, 0);
-    else {
-        send(new_fd, "Content-Type: application/octet-stream\n\n", 40, 0);
-        send(new_fd, "Content-Disposition: attachment\n\n", 33, 0);
-    }
+        send(new_fd, "Content-Type: image/gif\r\n\r\n", 27, 0);
+    else 
+        send(new_fd, "Content-Type: application/octet-stream\r\n\r\n", 42, 0);
 
-    // send the requested file 
+    // SEND the requested file 
     int bytesread;
-    char file_buffer[4096] = {0};
+    char file_buffer[8192] = {0};
     int fd = fileno(fp);
 
-    while ((bytesread = read(fd, file_buffer, 4096)) != 0) {
+    printf("test\n");
+
+    while ((bytesread = read(fd, file_buffer, 8192)) != 0) {
         if (bytesread > 0) {
             if (send(new_fd, file_buffer, bytesread, 0) == -1) {
                 perror("write error");
@@ -128,6 +129,7 @@ char* parseForFileName (char* request) {
     strncpy(filename_rough, request+starti, filename_size);
 
     // replace all "%20" substr with " "
+    // replace all "%25" substr with "%"
     int p20occurences = 0;
     char* filename = malloc(filename_size);
 
@@ -188,14 +190,14 @@ int main(int argc, char const *argv[]) {
     // Accept connections until session terminated
     // accept() - https://man7.org/linux/man-pages/man2/accept.2.html
     int valread; // store bytes read from client
-    char buffer[4096] = {0};
+    char buffer[8192] = {0};
     char *hello = "Hello from server";
     struct stat stats;
 
     while ((new_fd = accept(sock_fd, (struct sockaddr *) &client_addr, (socklen_t * ) & addrlen)) != -1) {
         // read request message from client
         // read() - https://man7.org/linux/man-pages/man2/read.2.html
-        valread = read(new_fd, buffer, 4096);
+        valread = read(new_fd, buffer, 8192);
         if (valread == -1) { // error handling for read
             close(sock_fd);
             close(new_fd);
