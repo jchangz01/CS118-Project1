@@ -9,6 +9,31 @@
 
 #define PORT 15635 // the port users will connect to
 
+char* getFileExtension (char* filename) {
+    char* extension = NULL;
+    int len = strlen(filename);
+    int i = len - 1;
+    // traverse from r to l to find first .
+    // substr right of . is our extension
+    while (i >= 0 && filename[i] != '.' ) i--;
+    
+    // if a dot exists, extension returned
+    // otherwise, null returned
+    if (i != -1) {
+        i++;
+        extension = malloc(len);
+        strncpy(extension, filename+i, len - i);
+    }
+    return extension;
+}
+
+void sendResponse(char *filename) {
+    // get file extension from filename
+    char* extension = getFileExtension(filename);
+
+    
+}
+
 /* Parses a request message for the filename */
 char* parseForFileName (char* request) {
     int starti, endi;
@@ -36,7 +61,11 @@ char* parseForFileName (char* request) {
     filename_rough[filename_size] = '\0';
 
     // replace all "%20" substr with " "
-    // TODO
+    // count number of %20 occurences 
+    int p20occurences = 0;
+    /*for (i = 0; filename_rough < filename_size - 2; i++) {
+        printf()
+    }*/
     return filename_rough;
 }
 
@@ -84,7 +113,7 @@ int main(int argc, char const *argv[]) {
     // accept() - https://man7.org/linux/man-pages/man2/accept.2.html
     // TODO
     int valread; // store bytes read from client
-    char buffer[1024] = {0};
+    char buffer[4096] = {0};
     char *hello = "Hello from server";
 
     while ((new_fd = accept(sock_fd, (struct sockaddr *) &client_addr, (socklen_t * ) & addrlen)) != -1) {
@@ -102,12 +131,12 @@ int main(int argc, char const *argv[]) {
             printf("%s\n", buffer);
 
             // parse request message for pathname
-            // for this project, it would be a single name
+            // for this project, it would be a single filename
             char* filename = parseForFileName(buffer);
             printf("%s\n", filename);
 
-            // get file type from filename
-            // TODO
+            printf("%s\n", getFileExtension(filename));
+            // send response to client
 
             //send(new_fd, hello, strlen(hello), 0);
             //printf("Hello message sent\n");
