@@ -23,7 +23,7 @@ You are encouraged to host your code in private repositories on [GitHub](https:/
 
 Justin Kyle Chang, jchangz01@g.ucla.edu, 205388820 
 
-Oliver De Visser, oliverdevisser@g.ucla.edu,605405016
+Oliver De Visser, oliverdevisser@g.ucla.edu, 605405016
 
 ## High Level Design
 
