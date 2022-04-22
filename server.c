@@ -27,11 +27,41 @@ char* getFileExtension (char* filename) {
     return extension;
 }
 
-void sendResponse(char *filename) {
+void sendResponse(char *filename, int new_fd) {
+    // open file to check if it exists
+    FILE* fp = fopen(filename, "r");
+    if (fp == NULL) { // file does not exist
+        send(new_fd, "HTTP/1.1 404 Not Found\n", 14, 0);
+        send(new_fd, "Content-Length: 13\n", 19, 0);
+        send(new_fd, "Content-Type: text/html\n\n", 25, 0);
+        send(new_fd, "<h1>404 Not Found</h1>", 20, 0);
+        close(new_fd);
+        return;
+    }
+
     // get file extension from filename
     char* extension = getFileExtension(filename);
+    printf("%s\n", extension);
 
-    
+    // send content-type based on extension
+    if (extension == NULL) {
+        printf("Content-Type: application/octet-stream\n\n");
+        printf("Content-Disposition: attachment\n\n");
+        send(new_fd, "Content-Type: application/octet-stream\n\n", 40, 0);
+        send(new_fd, "Content-Disposition: attachment\n\n", 33, 0);
+    }
+    else if ((strcasecmp(extension, "html") == 0) || (strcasecmp(extension, "htm") == 0)) {
+        printf("Content-Type: text/html\n\n");
+        send(new_fd, "Content-Type: text/html\n\n", 25, 0);
+    }
+    else if ((strcasecmp(extension, "jpeg") == 0) || (strcasecmp(extension, "jpg") == 0)) {
+        printf("Content-Type: image/jpeg\n\n");
+        send(new_fd, "Content-Type: image/jpeg\n\n", 26, 0);
+    }
+    else if (strcasecmp(extension, "gif") == 0) {
+        printf("Content-Type: image/gif\n\n");
+        send(new_fd, "Content-Type: image/gif\n\n", 25, 0);
+    }
 }
 
 /* Parses a request message for the filename */
@@ -42,31 +72,36 @@ char* parseForFileName (char* request) {
     while (request[i] != ' ') i++;
     i++; 
     // skip initial / of pathname
-    // set start i to start of pathname
+    // set start i to start of filename
     if (request[i] == '/') i++;
     starti = i;
 
     // pathname after request type (seperated by a space)
-    // set end i to end of pathname
+    // set end i to end of filename
     while (request[i] != ' ') i++;
     endi = i;
 
-    // allocate mem for size of path name
+    // allocate mem for size of file name
     // +1 for zero bit
     int filename_size = endi - starti;
-    char* filename_rough = malloc(filename_size + 1);
+    char* filename_rough = malloc(filename_size);
 
-    // set pathname var to appropriate path name
+    // set filename var to appropriate file name
     strncpy(filename_rough, request+starti, filename_size);
-    filename_rough[filename_size] = '\0';
 
     // replace all "%20" substr with " "
-    // count number of %20 occurences 
     int p20occurences = 0;
-    /*for (i = 0; filename_rough < filename_size - 2; i++) {
-        printf()
-    }*/
-    return filename_rough;
+    char* filename = malloc(filename_size);
+
+    for (int j = 0, k = 0; filename_rough[j] != '\0'; j++, k++){
+        if (filename_rough[j] == '%' && j <= filename_size - 3){ //char is '%' and enough room to replace "%20" with ' '
+            filename[k] = ' ';
+            j += 2; //iterate past "%2"
+        } else {
+            filename[k] = filename_rough[j];
+        }
+    }
+    return filename;
 }
 
 int main(int argc, char const *argv[]) {
@@ -119,14 +154,14 @@ int main(int argc, char const *argv[]) {
     while ((new_fd = accept(sock_fd, (struct sockaddr *) &client_addr, (socklen_t * ) & addrlen)) != -1) {
         // read request message from client
         // read() - https://man7.org/linux/man-pages/man2/read.2.html
-        valread = read(new_fd, buffer, 1024);
+        valread = read(new_fd, buffer, 4096);
         if (valread == -1) { // error handling for read
             close(sock_fd);
             close(new_fd);
             perror("read failed");
             exit(EXIT_FAILURE);
         }
-        else if (valread > 0) {// bytes were read
+        else if (valread > 0) { // bytes were read
             // print request message from client
             printf("%s\n", buffer);
 
@@ -135,8 +170,8 @@ int main(int argc, char const *argv[]) {
             char* filename = parseForFileName(buffer);
             printf("%s\n", filename);
 
-            printf("%s\n", getFileExtension(filename));
             // send response to client
+            sendResponse(filename, new_fd);
 
             //send(new_fd, hello, strlen(hello), 0);
             //printf("Hello message sent\n");
