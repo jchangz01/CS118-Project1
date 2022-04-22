@@ -48,7 +48,9 @@ void sendResponse(char *filename, struct stat stats, int new_fd) {
     char* content_length = malloc(len);
     sprintf(content_length, "Content-Length: %d\n", size);
 
+    printf("HTTP/1.1 200 OK\n");
     write(new_fd, "HTTP/1.1 200 OK\n", 16); //HTTP response
+    printf("%s", content_length);
     write(new_fd, content_length, size);
 
     // get file extension from filename
@@ -56,23 +58,31 @@ void sendResponse(char *filename, struct stat stats, int new_fd) {
     printf("%s\n", extension);
 
     // send content-type based on extension
-    if (extension == NULL) {
+    if (extension != NULL && strcasecmp(extension, "html") == 0) {
+        printf("Content-Type: text/html\n\n");
+        send(new_fd, "Content-Type: text/html\n\n", 25, 0);
+    }
+    else if (extension != NULL && strcasecmp(extension, "txt") == 0) {
+        printf("Content-Type: text/plain\n\n");
+        send(new_fd, "Content-Type: text/plain\n\n", 26, 0);
+    }
+    else if (extension != NULL && strcasecmp(extension, "jpg") == 0) {
+        printf("Content-Type: image/jpeg\n\n");
+        send(new_fd, "Content-Type: image/jpeg\n\n", 26, 0);
+    }
+    else if (extension != NULL && strcasecmp(extension, "png") == 0) {
+        printf("Content-Type: image/png\n\n");
+        send(new_fd, "Content-Type: image/png\n\n", 25, 0);
+    }
+    else if (extension != NULL && strcasecmp(extension, "gif") == 0) {
+        printf("Content-Type: image/gif\n\n");
+        send(new_fd, "Content-Type: image/gif\n\n", 25, 0);
+    }
+    else {
         printf("Content-Type: application/octet-stream\n\n");
         printf("Content-Disposition: attachment\n\n");
         send(new_fd, "Content-Type: application/octet-stream\n\n", 40, 0);
         send(new_fd, "Content-Disposition: attachment\n\n", 33, 0);
-    }
-    else if ((strcasecmp(extension, "html") == 0) || (strcasecmp(extension, "htm") == 0)) {
-        printf("Content-Type: text/html\n\n");
-        send(new_fd, "Content-Type: text/html\n\n", 25, 0);
-    }
-    else if ((strcasecmp(extension, "jpeg") == 0) || (strcasecmp(extension, "jpg") == 0)) {
-        printf("Content-Type: image/jpeg\n\n");
-        send(new_fd, "Content-Type: image/jpeg\n\n", 26, 0);
-    }
-    else if (strcasecmp(extension, "gif") == 0) {
-        printf("Content-Type: image/gif\n\n");
-        send(new_fd, "Content-Type: image/gif\n\n", 25, 0);
     }
 
     // send the requested file 
