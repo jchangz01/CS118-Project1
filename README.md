@@ -37,6 +37,22 @@ Another challenge we had was with being able to distinguish the file types and s
 
 A final challenge we had was with running the VirtualBox with the proper Ubuntu OS. When trying to start the remote machine, we got the error message that we didn't have the proper kernel installed, and that the virtual machine would unexpectedly quit during startup. This caused us a lot of trouble and time and we fixed it by looking through different pages online and trying different things. Uninstalling and reinstalling VirtualBox ended up solving a lot of our issues with that problem.
 
+## Utilized Libraries
+
+unistd.h
+
+stdio.h
+
+sys/socket.h
+
+sys/stat.h
+
+stdlib.h
+
+netinet/in.h
+
+string.h
+
 ## Acknowledgements
 
 [TA Simple Server Example](https://github.com/ZhaoweiTan/CS118-S22-Dis1B/blob/main/week1/simple-server-client/server.c)
